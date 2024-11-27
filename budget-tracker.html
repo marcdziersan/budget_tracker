@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Budget Tracker</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #f7f8fa, #dde1e7);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            height: 100vh;
+            color: #333;
+        }
+        header {
+            text-align: center;
+            margin-top: 20px;
+        }
+        header h1 {
+            margin: 0;
+            font-size: 2rem;
+        }
+        #app-container {
+            background: white;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+            padding: 20px;
+            width: 90%;
+            max-width: 400px;
+            display: flex;
+            flex-direction: column;
+        }
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            margin-bottom: 15px;
+        }
+        .input-group label {
+            margin-bottom: 5px;
+        }
+        .input-group input {
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .btn {
+            padding: 10px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            text-align: center;
+            margin-top: 10px;
+            transition: background-color 0.2s ease;
+        }
+        .btn:hover {
+            background-color: #0056b3;
+        }
+        #budget-summary {
+            margin-top: 20px;
+        }
+        #budget-summary h2 {
+            margin: 0 0 10px;
+        }
+        ul {
+            list-style: none;
+            padding: 0;
+        }
+        li {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid #ddd;
+        }
+        li span {
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Budget Tracker</h1>
+        <p>Verfolge deine Einnahmen und Ausgaben!</p>
+    </header>
+    <div id="app-container">
+        <div class="input-group">
+            <label for="description">Beschreibung</label>
+            <input type="text" id="description" placeholder="Z.B. Gehalt, Miete">
+        </div>
+        <div class="input-group">
+            <label for="amount">Betrag (positiv für Einnahmen, negativ für Ausgaben)</label>
+            <input type="number" id="amount" placeholder="Z.B. 500 oder -200">
+        </div>
+        <button id="add-transaction-btn" class="btn">Transaktion hinzufügen</button>
+        <div id="budget-summary">
+            <h2>Budget Übersicht</h2>
+            <p>Gesamt: <span id="total-amount">0 €</span></p>
+            <ul id="transaction-list"></ul>
+        </div>
+    </div>
+    <script>
+        class Transaction {
+            constructor(description, amount) {
+                this.description = description;
+                this.amount = parseFloat(amount);
+                this.id = Date.now();
+            }
+        }
+
+        class BudgetTracker {
+            constructor() {
+                this.transactions = [];
+                this.totalAmount = 0;
+                this.loadFromLocalStorage();
+            }
+
+            addTransaction(transaction) {
+                this.transactions.push(transaction);
+                this.updateTotal();
+                this.saveToLocalStorage();
+            }
+
+            removeTransaction(id) {
+                this.transactions = this.transactions.filter(t => t.id !== id);
+                this.updateTotal();
+                this.saveToLocalStorage();
+            }
+
+            updateTotal() {
+                this.totalAmount = this.transactions.reduce((sum, t) => sum + t.amount, 0);
+            }
+
+            saveToLocalStorage() {
+                localStorage.setItem('budgetTracker', JSON.stringify(this.transactions));
+            }
+
+            loadFromLocalStorage() {
+                const data = JSON.parse(localStorage.getItem('budgetTracker')) || [];
+                this.transactions = data.map(t => new Transaction(t.description, t.amount));
+                this.updateTotal();
+            }
+        }
+
+        class UI {
+            static renderTransactions(transactions) {
+                const transactionList = document.getElementById('transaction-list');
+                transactionList.innerHTML = '';
+                transactions.forEach(transaction => {
+                    const li = document.createElement('li');
+                    li.innerHTML = `
+                        ${transaction.description}: <span>${transaction.amount} €</span>
+                        <button class="btn btn-small" data-id="${transaction.id}">X</button>
+                    `;
+                    li.querySelector('button').addEventListener('click', () => {
+                        budgetTracker.removeTransaction(transaction.id);
+                        UI.render();
+                    });
+                    transactionList.appendChild(li);
+                });
+            }
+
+            static renderTotal(total) {
+                document.getElementById('total-amount').textContent = `${total} €`;
+            }
+
+            static render() {
+                UI.renderTransactions(budgetTracker.transactions);
+                UI.renderTotal(budgetTracker.totalAmount);
+            }
+        }
+
+        const budgetTracker = new BudgetTracker();
+        document.getElementById('add-transaction-btn').addEventListener('click', () => {
+            const description = document.getElementById('description').value.trim();
+            const amount = parseFloat(document.getElementById('amount').value.trim());
+
+            if (!description || isNaN(amount)) {
+                alert('Bitte eine gültige Beschreibung und einen Betrag eingeben.');
+                return;
+            }
+
+            const transaction = new Transaction(description, amount);
+            budgetTracker.addTransaction(transaction);
+            UI.render();
+
+            document.getElementById('description').value = '';
+            document.getElementById('amount').value = '';
+        });
+
+        // Initial render
+        UI.render();
+    </script>
+</body>
+</html>
